@@ -14,22 +14,18 @@ CARD_MAPPING = [
 ]
 
 
-def loadImage(filename, colorKey=None):
+def loadImage(filename):
     fullname = os.path.join('images', filename)
 
     try:
         image = pygame.image.load(fullname)
+        if image.get_alpha is None:
+            image = image.convert()
+        else:
+            image = image.convert_alpha()
     except pygame.error, message:
         print "Cannnot load image:", fulname
         raise SystemExit, message
-
-    # change the surface to draw more quickly
-    image = image.convert()
-
-    if colorKey is not None:
-        if colorKey is -1:
-            colorKey = image.get_at((0, 0))
-        image.set_colorkey(colorKey, RLEACCEL)
 
     return image, image.get_rect()
 
@@ -52,12 +48,12 @@ class Player(pygame.sprite.Sprite):
                 },
             'attacking' : {
                 'offset' : 2,
-                'updateFrameCount' : 20,
+                'updateFrameCount' : 15,
                 'frames' : 3,
                 },
             'dying' : {
                 'offset' : 3,
-                'updateFrameCount' : 20,
+                'updateFrameCount' : 15,
                 'frames' : 3,
                 }
         }
@@ -78,7 +74,7 @@ class Player(pygame.sprite.Sprite):
         actionData = self.actions[self.action]
 
         for count in range(actionData['frames']):
-            surface = pygame.Surface(self.rect.size).convert()
+            surface = pygame.Surface(self.rect.size, pygame.SRCALPHA)
             surface.blit(self.imageSheet, (0, 0),
                 pygame.Rect(
                     count * 128,
@@ -106,7 +102,7 @@ class Player(pygame.sprite.Sprite):
 class Card(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image, self.rect = loadImage(os.path.join('cards', '1.png'), -1)
+        self.image, self.rect = loadImage(os.path.join('cards', '1.png'))
 
     def update(self):
         pass
@@ -114,7 +110,11 @@ class Card(pygame.sprite.Sprite):
 
 def main():
     pygame.init()
-    screen = pygame.display.set_mode((800, 600))
+    screen = pygame.display.set_mode((1200, 600))
+
+    bg, bgRect = loadImage('bg.png')
+
+    screen.blit(bg, (0, 50))
 
     card = Card()
     player1 = Player()
@@ -136,6 +136,7 @@ def main():
     spriteList = pygame.sprite.Group(card, player1, player2, player3, player4)
 
     while True:
+        screen.blit(bg, (0, 50))
 
         for event in pygame.event.get():
             if event.type == QUIT:
