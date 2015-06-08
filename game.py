@@ -1,6 +1,8 @@
 
 import os.path
 
+import game
+
 import pygame
 
 from pygame.locals import *
@@ -31,44 +33,60 @@ def loadImage(filename):
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, actionType='resting'):
+    def __init__(self, position=0, actionType='resting'):
         pygame.sprite.Sprite.__init__(self)
-        self.images = []
 
         self.actions = {
             'resting' : {
                 'offset' : 0,
                 'updateFrameCount' : 100,
                 'frames' : 2,
+                'startFrame' : 0,
                 },
             'walking' : {
                 'offset' : 1,
-                'updateFrameCount' : 30,
+                'updateFrameCount' : 17,
                 'frames' : 4,
+                'startFrame' : 0,
                 },
             'attacking' : {
                 'offset' : 2,
                 'updateFrameCount' : 15,
                 'frames' : 3,
+                'startFrame' : 0,
                 },
             'dying' : {
                 'offset' : 3,
                 'updateFrameCount' : 15,
                 'frames' : 3,
+                'startFrame' : 0,
                 }
         }
 
         self.imageSheet, rect = loadImage('player1.png')
         self.rect = pygame.Rect(0, 0, 128, 128)
+        self.moveToRect = pygame.Rect(0, 0, 0, 0)
 
+        self.setPosition(position)
         self.setAction(actionType)
 
         self.updateCycle = 0
         self.updateCounter = 0
 
-    def setAction(self, actionType):
+    def setPosition(self, position=0):
+        self.rect.y = 280
+        self.rect.x = (52 * position) + 2
+        self.position = position
 
+    def moveToPosition(self, position=0):
+        self.position = position
+        self.moveToRect.x = (52 * position) + 2
+        self.setAction('walking')
+
+    def setAction(self, actionType):
         assert actionType in self.actions.keys()
+
+        self.images = []
 
         self.action = actionType
         actionData = self.actions[self.action]
@@ -81,9 +99,16 @@ class Player(pygame.sprite.Sprite):
                     128 * actionData['offset'],
                     128,
                     128))
+
+            if (actionType == 'walking' and self.moveToRect.x < self.rect.x) or \
+               (actionType != 'walking' and self.position >= 12):
+                surface = pygame.transform.flip(surface, True, False)
+
             self.images.append(surface)
 
-        self.image = self.images[0]
+        self.image = self.images[actionData['startFrame']]
+        self.updateCycle = actionData['startFrame']
+        self.updateCounter = 0
 
         self.frames = actionData['frames']
         self.updateFrameCount = actionData['updateFrameCount']
@@ -97,6 +122,11 @@ class Player(pygame.sprite.Sprite):
             self.image = self.images[self.updateCounter]
 
         self.updateCycle += 1
+
+        if self.rect.x < self.moveToRect.x:
+            self.rect.x += 1
+        elif self.action == 'walking' and self.rect.x == self.moveToRect.x:
+            self.setAction('resting')
 
 
 class Card(pygame.sprite.Sprite):
@@ -116,24 +146,9 @@ def main():
 
     screen.blit(bg, (0, 50))
 
-    card = Card()
-    player1 = Player()
-    player1.rect.x = 200
-    player1.rect.y = 200
+    player1 = Player(21)
 
-    player2 = Player('walking')
-    player2.rect.x = 400
-    player2.rect.y = 200
-
-    player3 = Player('dying')
-    player3.rect.x = 0
-    player3.rect.y = 200
-
-    player4 = Player('attacking')
-    player4.rect.x = 100
-    player4.rect.y = 400
-
-    spriteList = pygame.sprite.Group(card, player1, player2, player3, player4)
+    spriteList = pygame.sprite.Group(player1)
 
     while True:
         screen.blit(bg, (0, 50))
@@ -143,6 +158,8 @@ def main():
                 return
             elif event.type == KEYDOWN and event.key == K_ESCAPE:
                 return
+            elif event.type == KEYDOWN and event.key == K_SPACE:
+                player1.moveToPosition(player1.position - 4)
 
         spriteList.update()
 
